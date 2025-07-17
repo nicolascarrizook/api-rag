@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import chromadb
 from chromadb.config import Settings
-import openai
+from openai import OpenAI
 from docx import Document
 from dotenv import load_dotenv
 import uvicorn
@@ -34,8 +34,8 @@ CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "500"))
 CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "50"))
 MAX_SEARCH_RESULTS = int(os.getenv("MAX_SEARCH_RESULTS", "5"))
 
-# Initialize OpenAI
-openai.api_key = OPENAI_API_KEY
+# Initialize OpenAI client
+openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
 # Initialize FastAPI
 app = FastAPI(
@@ -144,7 +144,7 @@ def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVE
 def get_embeddings(texts: List[str]) -> List[List[float]]:
     """Get embeddings from OpenAI"""
     try:
-        response = openai.embeddings.create(
+        response = openai_client.embeddings.create(
             model="text-embedding-3-small",
             input=texts
         )
@@ -171,7 +171,7 @@ async def health_check():
         collections = chroma_client.list_collections()
         
         # Test OpenAI connection
-        test_embedding = openai.embeddings.create(
+        test_embedding = openai_client.embeddings.create(
             model="text-embedding-3-small",
             input=["test"]
         )
