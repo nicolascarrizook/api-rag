@@ -1,0 +1,450 @@
+{
+  "name": "WhatsApp Nutrition Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-webhook",
+        "responseMode": "onReceived",
+        "responseData": "allEntries",
+        "responseCode": 200
+      },
+      "id": "whatsapp-webhook",
+      "name": "WhatsApp Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "whatsapp-nutrition-webhook"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Verificar si es un webhook de verificación\nif ($input.item.json.hub && $input.item.json.hub.mode === 'subscribe') {\n  return [{\n    json: {\n      type: 'verification',\n      challenge: $input.item.json.hub.challenge,\n      verify_token: $input.item.json.hub.verify_token\n    }\n  }];\n}\n\n// Procesar mensaje de WhatsApp\nconst body = $input.item.json.body;\nif (!body || !body.entry || !body.entry[0] || !body.entry[0].changes || !body.entry[0].changes[0]) {\n  return [];\n}\n\nconst change = body.entry[0].changes[0];\nif (!change.value || !change.value.messages || !change.value.messages[0]) {\n  return [];\n}\n\nconst message = change.value.messages[0];\nconst from = message.from;\nconst messageId = message.id;\nconst timestamp = new Date().toISOString();\n\n// Extraer texto del mensaje\nlet text = '';\nif (message.text && message.text.body) {\n  text = message.text.body.toLowerCase().trim();\n} else if (message.button && message.button.text) {\n  text = message.button.text.toLowerCase().trim();\n} else if (message.interactive) {\n  if (message.interactive.button_reply) {\n    text = message.interactive.button_reply.id;\n  } else if (message.interactive.list_reply) {\n    text = message.interactive.list_reply.id;\n  }\n}\n\nreturn [{\n  json: {\n    from: from,\n    text: text,\n    messageId: messageId,\n    timestamp: timestamp,\n    originalMessage: message\n  }\n}];"
+      },
+      "id": "extract-message",
+      "name": "Extract Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM patients WHERE phone_number = $1 LIMIT 1",
+        "additionalFields": {
+          "queryParameters": "={{ [$json.from] }}"
+        }
+      },
+      "id": "check-existing-patient",
+      "name": "Check Existing Patient",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-nutrition-db",
+          "name": "Nutrition Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "new-patient",
+              "leftValue": "={{ $json.text }}",
+              "rightValue": "nuevo",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "control-patient", 
+              "leftValue": "={{ $json.text }}",
+              "rightValue": "control",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "replacement",
+              "leftValue": "={{ $json.text }}",
+              "rightValue": "reemplazo",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "fallbackOutput": "extra"
+      },
+      "id": "route-by-intent",
+      "name": "Route by Intent",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Motor 1: Nuevo Paciente\nconst session = {\n  motor_type: 1,\n  step: 'collect_name',\n  patient_data: {},\n  created_at: new Date().toISOString()\n};\n\n// Guardar sesión en Redis\nconst sessionKey = `session:${$json.from}`;\nconst sessionData = JSON.stringify(session);\n\n// Preparar respuesta\nconst response = {\n  to: $json.from,\n  type: 'text',\n  text: {\n    body: '¡Hola! Soy tu asistente de nutrición 🥗\\n\\nVamos a crear tu plan alimentario personalizado con el método \"Tres Días y Carga\".\\n\\nPrimero, ¿cuál es tu nombre?'\n  }\n};\n\nreturn [{\n  json: {\n    ...session,\n    from: $json.from,\n    response: response,\n    sessionKey: sessionKey,\n    sessionData: sessionData\n  }\n}];"
+      },
+      "id": "motor-1-nuevo",
+      "name": "Motor 1 - Nuevo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem", 
+        "jsCode": "// Motor 2: Control\nconst patientData = $('Check Existing Patient').item.json[0];\n\nif (!patientData) {\n  // No hay paciente registrado\n  const response = {\n    to: $json.from,\n    type: 'text',\n    text: {\n      body: 'No tienes un plan activo. Escribe \"nuevo\" para crear tu primer plan alimentario.'\n    }\n  };\n  return [{ json: { response: response, error: 'no_patient' } }];\n}\n\nconst session = {\n  motor_type: 2,\n  step: 'collect_current_weight',\n  patient_data: patientData,\n  created_at: new Date().toISOString()\n};\n\nconst response = {\n  to: $json.from,\n  type: 'text',\n  text: {\n    body: `¡Hola ${patientData.name}! 👋\\n\\nVamos a hacer el control de tu plan alimentario.\\n\\n¿Cuál es tu peso actual? (en kg)`\n  }\n};\n\nreturn [{\n  json: {\n    ...session,\n    from: $json.from,\n    response: response,\n    sessionKey: `session:${$json.from}`,\n    sessionData: JSON.stringify(session)\n  }\n}];"
+      },
+      "id": "motor-2-control",
+      "name": "Motor 2 - Control", 
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Motor 3: Reemplazo\nconst patientData = $('Check Existing Patient').item.json[0];\n\nif (!patientData) {\n  const response = {\n    to: $json.from,\n    type: 'text',\n    text: {\n      body: 'No tienes un plan activo. Escribe \"nuevo\" para crear tu primer plan alimentario.'\n    }\n  };\n  return [{ json: { response: response, error: 'no_patient' } }];\n}\n\nconst session = {\n  motor_type: 3,\n  step: 'select_meal_type',\n  patient_data: patientData,\n  created_at: new Date().toISOString()\n};\n\nconst response = {\n  to: $json.from,\n  type: 'interactive',\n  interactive: {\n    type: 'list',\n    header: {\n      type: 'text',\n      text: 'Reemplazo de Comida'\n    },\n    body: {\n      text: '¿Qué comida querés reemplazar?'\n    },\n    action: {\n      button: 'Ver opciones',\n      sections: [{\n        title: 'Comidas',\n        rows: [\n          { id: 'desayuno', title: 'Desayuno' },\n          { id: 'almuerzo', title: 'Almuerzo' },\n          { id: 'merienda', title: 'Merienda' },\n          { id: 'cena', title: 'Cena' }\n        ]\n      }]\n    }\n  }\n};\n\nreturn [{\n  json: {\n    ...session,\n    from: $json.from,\n    response: response,\n    sessionKey: `session:${$json.from}`,\n    sessionData: JSON.stringify(session)\n  }\n}];"
+      },
+      "id": "motor-3-reemplazo",
+      "name": "Motor 3 - Reemplazo",
+      "type": "n8n-nodes-base.code", 
+      "typeVersion": 2,
+      "position": [1120, 400]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Manejar conversaciones existentes\nconst sessionKey = `session:${$json.from}`;\n\n// Intentar obtener sesión desde Redis (esto se simula aquí)\n// En implementación real, usar nodo Redis\nlet session = null;\n\nif (!session) {\n  // No hay sesión activa, mostrar menú principal\n  const response = {\n    to: $json.from,\n    type: 'interactive',\n    interactive: {\n      type: 'button',\n      header: {\n        type: 'text',\n        text: 'Bot de Nutrición 🥗'\n      },\n      body: {\n        text: '¡Hola! Soy tu asistente nutricional.\\n\\n¿Qué querés hacer hoy?'\n      },\n      action: {\n        buttons: [\n          {\n            type: 'reply',\n            reply: {\n              id: 'nuevo',\n              title: '🆕 Plan Nuevo'\n            }\n          },\n          {\n            type: 'reply', \n            reply: {\n              id: 'control',\n              title: '📊 Control'\n            }\n          },\n          {\n            type: 'reply',\n            reply: {\n              id: 'reemplazo',\n              title: '🔄 Reemplazo'\n            }\n          }\n        ]\n      }\n    }\n  };\n  \n  return [{ json: { response: response, action: 'show_menu' } }];\n}\n\n// Continuar conversación existente\nreturn [{ json: { session: session, action: 'continue_conversation' } }];"
+      },
+      "id": "handle-existing-conversation",
+      "name": "Handle Existing Conversation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://rag_api:8000/context",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {\n              \"name\": \"patient_data\",\n              \"value\": \"={{ $json.patient_data }}\"\n            },\n            {\n              \"name\": \"motor_type\",\n              \"value\": \"={{ $json.motor_type }}\"\n            },\n            {\n              \"name\": \"specific_request\",\n              \"value\": \"={{ $json.text }}\"\n            },\n            {\n              \"name\": \"conversation_history\",\n              \"value\": []\n            }\n          ]\n        },\n        \"headers\": {\n          \"parameters\": [\n            {\n              \"name\": \"Content-Type\",\n              \"value\": \"application/json\"\n            }\n          ]\n        }\n      },\n      \"id\": \"get-rag-context\",\n      \"name\": \"Get RAG Context\",\n      \"type\": \"n8n-nodes-base.httpRequest\",\n      \"typeVersion\": 4,\n      \"position\": [1340, 300]\n    },\n    {\n      \"parameters\": {\n        \"resource\": \"chatCompletion\",\n        \"model\": \"gpt-4-turbo-preview\",\n        \"messages\": {\n          \"messages\": [\n            {\n              \"role\": \"system\",\n              \"content\": \"Eres un nutricionista experto en el método 'Tres Días y Carga | Dieta Inteligente® & Nutrición Evolutiva'.\\n\\nREGLAS ESTRICTAS:\\n- Genera planes de 3 días IGUALES\\n- Macronutrientes equilibrados entre comidas principales\\n- TODOS los pesos en gramos CRUDOS (excepto verduras libres)\\n- Verduras tipo C (papa, batata, choclo) SIEMPRE en gramos\\n- Usa léxico ARGENTINO exclusivamente\\n- Formato exacto requerido\\n\\nOBJETIVOS VÁLIDOS: -1kg, -0.5kg, mantener, +0.5kg, +1kg por semana\\n\\nContexto nutricional relevante:\\n{{ $('Get RAG Context').item.json.context }}\\n\\nRecomendaciones específicas:\\n{{ $('Get RAG Context').item.json.recommendations.join('\\\\n') }}\"\n            },\n            {\n              \"role\": \"user\",\n              \"content\": \"Genera un plan alimentario para:\\n\\nPaciente: {{ $json.patient_data.name || 'Paciente' }}\\nEdad: {{ $json.patient_data.age }} años\\nPeso: {{ $json.patient_data.weight }} kg\\nAltura: {{ $json.patient_data.height }} cm\\nObjetivo: {{ $json.patient_data.objective }}\\nActividad: {{ $json.patient_data.activity_level }}\\n\\nTipo de consulta: Motor {{ $json.motor_type }}\\n\\nFormato de respuesta:\\nPLAN ALIMENTARIO - [NOMBRE]\\nObjetivo: [objetivo]\\n=== DÍA 1, 2 y 3 ===\\nDESAYUNO (XX:XX hs)\\n• Alimento 1: XXg\\n• Alimento 2: XXg\\nPreparación: [descripción]\\n[Resto de comidas...]\\nMacros diarios: P: XXg | C: XXg | G: XXg\\nCalorías: XXXX kcal\"\n            }\n          ]\n        },\n        \"options\": {\n          \"temperature\": 0.7,\n          \"maxTokens\": 2000\n        }\n      },\n      \"id\": \"generate-with-openai\",\n      \"name\": \"Generate with OpenAI\",\n      \"type\": \"n8n-nodes-base.openAi\",\n      \"typeVersion\": 1,\n      \"position\": [1560, 300],\n      \"credentials\": {\n        \"openAiApi\": {\n          \"id\": \"openai-nutrition-api\",\n          \"name\": \"OpenAI Nutrition API\"\n        }\n      }\n    },\n    {\n      \"parameters\": {\n        \"method\": \"POST\",\n        \"url\": \"https://graph.facebook.com/v18.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages\",\n        \"sendHeaders\": true,\n        \"headerParameters\": {\n          \"parameters\": [\n            {\n              \"name\": \"Authorization\",\n              \"value\": \"Bearer {{ $env.WHATSAPP_ACCESS_TOKEN }}\"\n            },\n            {\n              \"name\": \"Content-Type\",\n              \"value\": \"application/json\"\n            }\n          ]\n        },\n        \"sendBody\": true,\n        \"bodyParameters\": {\n          \"parameters\": [\n            {\n              \"name\": \"messaging_product\",\n              \"value\": \"whatsapp\"\n            },\n            {\n              \"name\": \"to\",\n              \"value\": \"={{ $json.from }}\"\n            },\n            {\n              \"name\": \"type\",\n              \"value\": \"text\"\n            },\n            {\n              \"name\": \"text\",\n              \"value\": {\n                \"body\": \"={{ $('Generate with OpenAI').item.json.choices[0].message.content }}\"\n              }\n            }\n          ]\n        }\n      },\n      \"id\": \"send-whatsapp-response\",\n      \"name\": \"Send WhatsApp Response\",\n      \"type\": \"n8n-nodes-base.httpRequest\",\n      \"typeVersion\": 4,\n      \"position\": [1780, 300]\n    },\n    {\n      \"parameters\": {\n        \"operation\": \"insert\",\n        \"table\": \"conversations\",\n        \"columns\": {\n          \"mappingMode\": \"defineBelow\",\n          \"value\": {\n            \"patient_id\": \"={{ $json.patient_id }}\",\n            \"session_id\": \"={{ $json.sessionKey }}\",\n            \"message_id\": \"={{ $json.messageId }}\",\n            \"message_type\": \"text\",\n            \"message_text\": \"={{ $json.text }}\",\n            \"response_text\": \"={{ $('Generate with OpenAI').item.json.choices[0].message.content }}\",\n            \"motor_type\": \"={{ $json.motor_type }}\",\n            \"conversation_state\": \"={{ JSON.stringify($json) }}\"\n          }\n        }\n      },\n      \"id\": \"save-conversation\",\n      \"name\": \"Save Conversation\",\n      \"type\": \"n8n-nodes-base.postgres\",\n      \"typeVersion\": 2,\n      \"position\": [2000, 300],\n      \"credentials\": {\n        \"postgres\": {\n          \"id\": \"postgres-nutrition-db\",\n          \"name\": \"Nutrition Database\"\n        }\n      }\n    }\n  ],\n  \"connections\": {\n    \"WhatsApp Webhook\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Extract Message\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    },\n    \"Extract Message\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Check Existing Patient\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    },\n    \"Check Existing Patient\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Route by Intent\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    },\n    \"Route by Intent\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Motor 1 - Nuevo\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ],\n        [\n          {\n            \"node\": \"Motor 2 - Control\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ],\n        [\n          {\n            \"node\": \"Motor 3 - Reemplazo\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ],\n        [\n          {\n            \"node\": \"Handle Existing Conversation\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    },\n    \"Motor 1 - Nuevo\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Get RAG Context\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    },\n    \"Motor 2 - Control\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Get RAG Context\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    },\n    \"Motor 3 - Reemplazo\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Get RAG Context\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    },\n    \"Get RAG Context\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Generate with OpenAI\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    },\n    \"Generate with OpenAI\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Send WhatsApp Response\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    },\n    \"Send WhatsApp Response\": {\n      \"main\": [\n        [\n          {\n            \"node\": \"Save Conversation\",\n            \"type\": \"main\",\n            \"index\": 0\n          }\n        ]\n      ]\n    }\n  },\n  \"active\": true,\n  \"settings\": {\n    \"executionOrder\": \"v1\"\n  },\n  \"versionId\": \"1.0.0\",\n  \"meta\": {\n    \"templateCredsSetupCompleted\": true\n  },\n  \"id\": \"whatsapp-nutrition-bot\",\n  \"tags\": [\"whatsapp\", \"nutrition\", \"bot\"]\n}"
+      },
+      "id": "handle-existing-conversation",
+      "name": "Handle Existing Conversation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://rag_api:8000/context",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "patient_data",
+              "value": "={{ $json.patient_data }}"
+            },
+            {
+              "name": "motor_type",
+              "value": "={{ $json.motor_type }}"
+            },
+            {
+              "name": "specific_request",
+              "value": "={{ $json.text }}"
+            },
+            {
+              "name": "conversation_history",
+              "value": []
+            }
+          ]
+        },
+        "headers": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "id": "get-rag-context",
+      "name": "Get RAG Context",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "resource": "chatCompletion",
+        "model": "gpt-4-turbo-preview",
+        "messages": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "Eres un nutricionista experto en el método 'Tres Días y Carga | Dieta Inteligente® & Nutrición Evolutiva'.\n\nREGLAS ESTRICTAS:\n- Genera planes de 3 días IGUALES\n- Macronutrientes equilibrados entre comidas principales\n- TODOS los pesos en gramos CRUDOS (excepto verduras libres)\n- Verduras tipo C (papa, batata, choclo) SIEMPRE en gramos\n- Usa léxico ARGENTINO exclusivamente\n- Formato exacto requerido\n\nOBJETIVOS VÁLIDOS: -1kg, -0.5kg, mantener, +0.5kg, +1kg por semana\n\nContexto nutricional relevante:\n{{ $('Get RAG Context').item.json.context }}\n\nRecomendaciones específicas:\n{{ $('Get RAG Context').item.json.recommendations.join('\\n') }}"
+            },
+            {
+              "role": "user",
+              "content": "Genera un plan alimentario para:\n\nPaciente: {{ $json.patient_data.name || 'Paciente' }}\nEdad: {{ $json.patient_data.age }} años\nPeso: {{ $json.patient_data.weight }} kg\nAltura: {{ $json.patient_data.height }} cm\nObjetivo: {{ $json.patient_data.objective }}\nActividad: {{ $json.patient_data.activity_level }}\n\nTipo de consulta: Motor {{ $json.motor_type }}\n\nFormato de respuesta:\nPLAN ALIMENTARIO - [NOMBRE]\nObjetivo: [objetivo]\n=== DÍA 1, 2 y 3 ===\nDESAYUNO (XX:XX hs)\n• Alimento 1: XXg\n• Alimento 2: XXg\nPreparación: [descripción]\n[Resto de comidas...]\nMacros diarios: P: XXg | C: XXg | G: XXg\nCalorías: XXXX kcal"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.7,
+          "maxTokens": 2000
+        }
+      },
+      "id": "generate-with-openai",
+      "name": "Generate with OpenAI",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [1560, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-nutrition-api",
+          "name": "OpenAI Nutrition API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v18.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.WHATSAPP_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "messaging_product",
+              "value": "whatsapp"
+            },
+            {
+              "name": "to",
+              "value": "={{ $json.from }}"
+            },
+            {
+              "name": "type",
+              "value": "text"
+            },
+            {
+              "name": "text",
+              "value": {
+                "body": "={{ $('Generate with OpenAI').item.json.choices[0].message.content }}"
+              }
+            }
+          ]
+        }
+      },
+      "id": "send-whatsapp-response",
+      "name": "Send WhatsApp Response",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "conversations",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "patient_id": "={{ $json.patient_id }}",
+            "session_id": "={{ $json.sessionKey }}",
+            "message_id": "={{ $json.messageId }}",
+            "message_type": "text",
+            "message_text": "={{ $json.text }}",
+            "response_text": "={{ $('Generate with OpenAI').item.json.choices[0].message.content }}",
+            "motor_type": "={{ $json.motor_type }}",
+            "conversation_state": "={{ JSON.stringify($json) }}"
+          }
+        }
+      },
+      "id": "save-conversation",
+      "name": "Save Conversation",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [2000, 300],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-nutrition-db",
+          "name": "Nutrition Database"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "WhatsApp Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Message": {
+      "main": [
+        [
+          {
+            "node": "Check Existing Patient",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Existing Patient": {
+      "main": [
+        [
+          {
+            "node": "Route by Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Intent": {
+      "main": [
+        [
+          {
+            "node": "Motor 1 - Nuevo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Motor 2 - Control",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Motor 3 - Reemplazo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Existing Conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Motor 1 - Nuevo": {
+      "main": [
+        [
+          {
+            "node": "Get RAG Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Motor 2 - Control": {
+      "main": [
+        [
+          {
+            "node": "Get RAG Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Motor 3 - Reemplazo": {
+      "main": [
+        [
+          {
+            "node": "Get RAG Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get RAG Context": {
+      "main": [
+        [
+          {
+            "node": "Generate with OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate with OpenAI": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send WhatsApp Response": {
+      "main": [
+        [
+          {
+            "node": "Save Conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1.0.0",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "whatsapp-nutrition-bot",
+  "tags": ["whatsapp", "nutrition", "bot"]
+}

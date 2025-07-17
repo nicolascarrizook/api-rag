@@ -1,0 +1,73 @@
+# Environment files
+.env
+*.env
+.env.local
+.env.production
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# ChromaDB
+chroma_db/
+*.db
+*.sqlite
+
+# Logs
+*.log
+logs/
+
+# Uploads
+uploads/
+*.docx
+*.doc
+
+# Backups
+backups/
+*.tar.gz
+
+# macOS
+.DS_Store
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+tmp/
+temp/
+*~
+
+# Docker
+docker-compose.override.yml
+postgres/data/
+redis/data/
+n8n/data/

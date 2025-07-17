@@ -1,0 +1,69 @@
+FUENTES DE PROTEÍNA - VALORES NUTRICIONALES POR 100g CRUDO
+
+CARNES ROJAS:
+- Bife de lomo: 26g proteína, 15g grasa, 0g carbohidratos, 250 kcal
+- Carne picada magra (5% grasa): 22g proteína, 5g grasa, 0g carbohidratos, 130 kcal
+- Lomo: 27g proteína, 8g grasa, 0g carbohidratos, 180 kcal
+- Bife de chorizo: 25g proteína, 18g grasa, 0g carbohidratos, 270 kcal
+- Peceto: 24g proteína, 6g grasa, 0g carbohidratos, 150 kcal
+- Vacío: 23g proteína, 12g grasa, 0g carbohidratos, 200 kcal
+
+AVES:
+- Pechuga de pollo sin piel: 23g proteína, 2g grasa, 0g carbohidratos, 110 kcal
+- Muslo de pollo sin piel: 20g proteína, 8g grasa, 0g carbohidratos, 150 kcal
+- Pollo entero sin piel: 21g proteína, 6g grasa, 0g carbohidratos, 135 kcal
+- Pavo pechuga: 24g proteína, 1g grasa, 0g carbohidratos, 105 kcal
+
+PESCADOS Y MARISCOS:
+- Merluza: 18g proteína, 1g grasa, 0g carbohidratos, 82 kcal
+- Salmón: 22g proteína, 12g grasa, 0g carbohidratos, 200 kcal
+- Atún fresco: 25g proteína, 1g grasa, 0g carbohidratos, 110 kcal
+- Atún en agua: 23g proteína, 1g grasa, 0g carbohidratos, 100 kcal
+- Lenguado: 17g proteína, 1g grasa, 0g carbohidratos, 78 kcal
+- Corvina: 19g proteína, 1g grasa, 0g carbohidratos, 85 kcal
+- Caballa: 19g proteína, 14g grasa, 0g carbohidratos, 205 kcal
+- Sardinas: 20g proteína, 10g grasa, 0g carbohidratos, 170 kcal
+- Camarones: 20g proteína, 1g grasa, 0g carbohidratos, 85 kcal
+- Mejillones: 18g proteína, 2g grasa, 4g carbohidratos, 100 kcal
+
+HUEVOS Y LÁCTEOS:
+- Huevos enteros: 13g proteína, 11g grasa, 1g carbohidratos, 155 kcal
+- Claras de huevo: 11g proteína, 0g grasa, 1g carbohidratos, 48 kcal
+- Yogur griego descremado: 10g proteína, 0g grasa, 4g carbohidratos, 56 kcal
+- Queso cottage: 11g proteína, 4g grasa, 3g carbohidratos, 98 kcal
+- Ricota descremada: 11g proteína, 8g grasa, 3g carbohidratos, 135 kcal
+- Queso port salut: 25g proteína, 25g grasa, 2g carbohidratos, 330 kcal
+- Leche descremada: 3g proteína, 0g grasa, 5g carbohidratos, 34 kcal
+
+LEGUMBRES (COCIDAS):
+- Lentejas: 9g proteína, 0g grasa, 20g carbohidratos, 116 kcal
+- Garbanzos: 8g proteína, 3g grasa, 27g carbohidratos, 164 kcal
+- Porotos negros: 9g proteína, 1g grasa, 23g carbohidratos, 132 kcal
+- Porotos blancos: 8g proteína, 1g grasa, 23g carbohidratos, 127 kcal
+- Arvejas: 8g proteína, 1g grasa, 14g carbohidratos, 84 kcal
+
+PROTEÍNAS VEGETALES:
+- Tofu firme: 15g proteína, 8g grasa, 2g carbohidratos, 144 kcal
+- Tempeh: 19g proteína, 11g grasa, 9g carbohidratos, 193 kcal
+- Seitán: 25g proteína, 2g grasa, 14g carbohidratos, 170 kcal
+- Quinoa cocida: 4g proteína, 2g grasa, 22g carbohidratos, 120 kcal
+
+SUPLEMENTOS:
+- Proteína whey aislada: 90g proteína, 1g grasa, 1g carbohidratos, 370 kcal
+- Proteína caseína: 80g proteína, 1g grasa, 4g carbohidratos, 345 kcal
+- Proteína vegetal (guisante): 85g proteína, 2g grasa, 2g carbohidratos, 360 kcal
+
+FRUTOS SECOS Y SEMILLAS (alto contenido proteico):
+- Almendras: 21g proteína, 49g grasa, 22g carbohidratos, 579 kcal
+- Nueces: 15g proteína, 65g grasa, 14g carbohidratos, 654 kcal
+- Semillas de chía: 17g proteína, 31g grasa, 42g carbohidratos, 486 kcal
+- Semillas de cáñamo: 31g proteína, 49g grasa, 8g carbohidratos, 553 kcal
+- Mantequilla de maní: 25g proteína, 50g grasa, 20g carbohidratos, 588 kcal
+
+NOTAS IMPORTANTES:
+- Todos los valores son para alimentos crudos excepto donde se especifique "cocido"
+- Las legumbres aumentan su peso 2-3 veces al cocinarse
+- La cocción no cambia significativamente el contenido proteico
+- Para carnes: la cocción reduce el peso por pérdida de agua, concentrando nutrientes
+- Elegir siempre las opciones más magras para optimizar la relación proteína/grasa
+- Combinar proteínas vegetales para obtener aminoácidos completos

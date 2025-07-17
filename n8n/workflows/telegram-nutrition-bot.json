@@ -1,0 +1,312 @@
+{
+  "name": "Telegram Nutrition Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "telegram-webhook",
+        "responseMode": "onReceived",
+        "responseData": "allEntries",
+        "responseCode": 200
+      },
+      "id": "telegram-webhook",
+      "name": "Telegram Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "telegram-nutrition-webhook"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Extraer mensaje de Telegram\nconst body = $input.item.json.body;\n\nif (!body || !body.message) {\n  return [];\n}\n\nconst message = body.message;\nconst from = message.from;\nconst chat = message.chat;\nconst text = message.text || '';\nconst messageId = message.message_id;\nconst updateId = body.update_id;\nconst timestamp = new Date().toISOString();\n\nreturn [{\n  json: {\n    updateId: updateId,\n    messageId: messageId,\n    userId: from.id,\n    chatId: chat.id,\n    firstName: from.first_name,\n    lastName: from.last_name || '',\n    username: from.username || '',\n    text: text.toLowerCase().trim(),\n    originalText: text,\n    timestamp: timestamp,\n    platform: 'telegram'\n  }\n}];"
+      },
+      "id": "extract-telegram-message",
+      "name": "Extract Telegram Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM patients WHERE phone_number = $1 LIMIT 1",
+        "additionalFields": {
+          "queryParameters": "={{ [$json.userId.toString()] }}"
+        }
+      },
+      "id": "check-existing-patient",
+      "name": "Check Existing Patient",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-nutrition-db",
+          "name": "Nutrition Database"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "new-patient",
+              "leftValue": "={{ $json.text }}",
+              "rightValue": "nuevo",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "new-patient-button",
+              "leftValue": "={{ $json.text }}",
+              "rightValue": "🆕 plan nuevo",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "control-patient", 
+              "leftValue": "={{ $json.text }}",
+              "rightValue": "control",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "control-button",
+              "leftValue": "={{ $json.text }}",
+              "rightValue": "📊 control",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "replacement",
+              "leftValue": "={{ $json.text }}",
+              "rightValue": "reemplazo",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "replacement-button",
+              "leftValue": "={{ $json.text }}",
+              "rightValue": "🔄 reemplazo",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "fallbackOutput": "extra"
+      },
+      "id": "route-by-intent",
+      "name": "Route by Intent",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://rag_api:8000/telegram/webhook",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "update_id",
+              "value": "={{ $json.updateId }}"
+            },
+            {
+              "name": "message",
+              "value": {
+                "message_id": "={{ $json.messageId }}",
+                "from": {
+                  "id": "={{ $json.userId }}",
+                  "is_bot": false,
+                  "first_name": "={{ $json.firstName }}",
+                  "last_name": "={{ $json.lastName }}",
+                  "username": "={{ $json.username }}"
+                },
+                "chat": {
+                  "id": "={{ $json.chatId }}",
+                  "type": "private",
+                  "first_name": "={{ $json.firstName }}"
+                },
+                "date": "={{ Math.floor(Date.now() / 1000) }}",
+                "text": "={{ $json.originalText }}"
+              }
+            }
+          ]
+        },
+        "headers": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "id": "forward-to-rag-api",
+      "name": "Forward to RAG API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "conversations",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "patient_id": "={{ $json.userId }}",
+            "session_id": "telegram_{{ $json.userId }}",
+            "message_id": "{{ $json.messageId }}",
+            "message_type": "text",
+            "message_text": "={{ $json.originalText }}",
+            "response_text": "Sistema procesando...",
+            "motor_type": 1,
+            "conversation_state": "={{ JSON.stringify($json) }}"
+          }
+        }
+      },
+      "id": "save-conversation",
+      "name": "Save Conversation",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1340, 300],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-nutrition-db",
+          "name": "Nutrition Database"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract Telegram Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Telegram Message": {
+      "main": [
+        [
+          {
+            "node": "Check Existing Patient",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Existing Patient": {
+      "main": [
+        [
+          {
+            "node": "Route by Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Intent": {
+      "main": [
+        [
+          {
+            "node": "Forward to RAG API",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Forward to RAG API",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Forward to RAG API",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Forward to RAG API",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Forward to RAG API",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Forward to RAG API",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Forward to RAG API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Forward to RAG API": {
+      "main": [
+        [
+          {
+            "node": "Save Conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "2.0.0",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "telegram-nutrition-bot",
+  "tags": ["telegram", "nutrition", "bot"]
+}

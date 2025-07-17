@@ -1,0 +1,184 @@
+PLAN ALIMENTARIO BASE - MÉTODO TRES DÍAS Y CARGA
+Ejemplo de referencia para generar planes personalizados
+
+=== ESTRUCTURA BÁSICA ===
+
+FORMATO OBLIGATORIO:
+PLAN ALIMENTARIO - [NOMBRE DEL PACIENTE]
+Objetivo: [objetivo semanal: -1kg, -0.5kg, mantener, +0.5kg, +1kg]
+=== DÍA 1, 2 y 3 ===
+
+DESAYUNO (08:00 hs)
+• [Alimento 1]: [cantidad en gramos]
+• [Alimento 2]: [cantidad en gramos]
+• [Alimento 3]: [cantidad en gramos]
+Preparación: [descripción detallada]
+
+ALMUERZO (13:00 hs)
+• [Alimento 1]: [cantidad en gramos]
+• [Alimento 2]: [cantidad en gramos]
+• [Alimento 3]: [cantidad en gramos]
+Preparación: [descripción detallada]
+
+MERIENDA (16:30 hs)
+• [Alimento 1]: [cantidad en gramos]
+• [Alimento 2]: [cantidad en gramos]
+Preparación: [descripción detallada]
+
+CENA (20:00 hs)
+• [Alimento 1]: [cantidad en gramos]
+• [Alimento 2]: [cantidad en gramos]
+• [Alimento 3]: [cantidad en gramos]
+Preparación: [descripción detallada]
+
+Macros diarios: P: [gramos]g | C: [gramos]g | G: [gramos]g
+Calorías: [total] kcal
+
+=== EJEMPLO COMPLETO ===
+
+PLAN ALIMENTARIO - MARÍA GARCÍA
+Objetivo: -0.5kg por semana
+=== DÍA 1, 2 y 3 ===
+
+DESAYUNO (08:00 hs)
+• Yogur griego descremado: 200g
+• Avena tradicional: 40g
+• Banana: 100g
+• Almendras: 15g
+Preparación: Cocinar la avena con agua hasta obtener consistencia cremosa. Dejar enfriar y mezclar con el yogur griego. Agregar banana en rodajas y almendras picadas.
+
+ALMUERZO (13:00 hs)
+• Pechuga de pollo: 150g
+• Batata: 120g
+• Brócoli: 150g
+• Aceite de oliva: 10g
+Preparación: Cocinar la pechuga a la plancha condimentada con especias. Hornear la batata en rodajas. Hervir el brócoli al dente. Rociar todo con aceite de oliva.
+
+MERIENDA (16:30 hs)
+• Manzana: 120g
+• Almendras: 15g
+Preparación: Cortar la manzana en bastones. Acompañar con almendras. Ideal para llevar.
+
+CENA (20:00 hs)
+• Merluza: 140g
+• Ensalada mixta: 200g (lechuga, tomate, pepino)
+• Aceite de oliva: 8g
+Preparación: Cocinar la merluza al horno con limón y especias. Preparar ensalada fresca y aliñar con aceite de oliva y limón.
+
+Macros diarios: P: 125g | C: 140g | G: 58g
+Calorías: 1480 kcal
+
+=== REGLAS FUNDAMENTALES ===
+
+1. PESOS SIEMPRE EN GRAMOS CRUDOS:
+   - Carnes, pescados, huevos: peso crudo
+   - Cereales, legumbres: peso crudo (antes de cocinar)
+   - Verduras tipo C (papa, batata, choclo): peso crudo
+   - Verduras libres: pueden ser aproximadas
+
+2. DISTRIBUCIÓN DE MACRONUTRIENTES:
+   - Proteína: 1.6-2.2g por kg de peso corporal
+   - Carbohidratos: 3-5g por kg de peso corporal
+   - Grasas: 0.8-1.2g por kg de peso corporal
+
+3. DISTRIBUCIÓN CALÓRICA POR COMIDA:
+   - Desayuno: 25-30% del total diario
+   - Almuerzo: 35-40% del total diario
+   - Merienda: 10-15% del total diario
+   - Cena: 20-25% del total diario
+
+4. HORARIOS ESTÁNDAR:
+   - Desayuno: 08:00 hs
+   - Almuerzo: 13:00 hs
+   - Merienda: 16:30 hs
+   - Cena: 20:00 hs
+
+5. HIDRATACIÓN:
+   - Mínimo 35ml por kg de peso corporal
+   - Aumentar en días de entrenamiento
+   - Preferir agua, evitar bebidas azucaradas
+
+=== AJUSTES SEGÚN OBJETIVO ===
+
+PÉRDIDA DE PESO (-0.5kg a -1kg/semana):
+- Déficit calórico: 300-500 kcal/día
+- Mayor proporción de proteínas
+- Carbohidratos alrededor del entrenamiento
+- Grasas saludables en cantidad moderada
+
+MANTENIMIENTO:
+- Calorías de mantenimiento
+- Balance equilibrado de macronutrientes
+- Flexibilidad en timing de carbohidratos
+
+GANANCIA DE PESO (+0.5kg a +1kg/semana):
+- Superávit calórico: 300-500 kcal/día
+- Aumento gradual de carbohidratos
+- Mantener proteína alta
+- Incluir grasas saludables
+
+=== CONSIDERACIONES ESPECIALES ===
+
+NIVEL DE ACTIVIDAD:
+- Sedentario: Menor cantidad de carbohidratos
+- Ligero: Carbohidratos moderados
+- Moderado-Intenso: Mayor cantidad de carbohidratos
+- Atleta: Carbohidratos altos, timing específico
+
+GÉNERO:
+- Mujeres: Generalmente menores cantidades
+- Hombres: Mayores requerimientos calóricos
+
+EDAD:
+- Jóvenes (18-30): Metabolismo más rápido
+- Adultos (30-50): Ajustar según actividad
+- Mayores (50+): Enfoque en mantenimiento muscular
+
+=== LÉXICO ARGENTINO OBLIGATORIO ===
+
+USAR SIEMPRE:
+- Palta (no aguacate)
+- Choclo (no maíz/elote)
+- Ananá (no piña)
+- Batata (no camote/boniato)
+- Frutillas (no fresas)
+- Durazno (no melocotón)
+- Damasco (no albaricoque)
+- Arvejas (no guisantes)
+- Porotos (no frijoles/judías)
+- Zapallitos (no calabacines)
+- Zapallo (no calabaza)
+- Morrones (no pimientos)
+
+TÉRMINOS DE COCCIÓN:
+- A la plancha (no a la parrilla para sartén)
+- Hervido/a (no cocido al vapor si es en agua)
+- Salteado/a (no sofrito)
+- Al horno (no horneado)
+
+CONDIMENTOS:
+- Sal y pimienta a gusto
+- Limón exprimido
+- Hierbas frescas (perejil, orégano, albahaca)
+- Especias (pimentón, comino, ají molido)
+
+=== PREPARACIONES TÍPICAS ===
+
+CARNES:
+- A la plancha con especias
+- Al horno con limón y hierbas
+- Hervidas en caldo desgrasado
+- Grilladas (si es parrilla real)
+
+VEGETALES:
+- Al vapor
+- Salteados con aceite en spray
+- Hervidos al dente
+- Crudos en ensaladas
+
+CEREALES:
+- Cocidos en agua
+- Al dente para mejor digestión
+- Enfriados para ensaladas
+
+Esta estructura debe respetarse en todos los planes generados, adaptando las cantidades y alimentos según las necesidades individuales del paciente.

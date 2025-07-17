@@ -1,0 +1,321 @@
+{
+  "name": "Telegram Nutrition Bot Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "telegram-nutrition",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Telegram",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.action}}",
+              "operation": "equal",
+              "value2": "generate_plan"
+            }
+          ]
+        }
+      },
+      "id": "check-action",
+      "name": "Check Action",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://YOUR_RAG_API_SERVER:8001/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{$json.patient_data.objetivo}} {{$json.patient_data.actividad}} {{$json.patient_data.edad}} años plan nutricional"
+            },
+            {
+              "name": "max_results",
+              "value": "3"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "search-rag",
+      "name": "Search RAG Knowledge",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 180]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "create",
+        "chatId": {
+          "chatId": "={{$json.user_id}}"
+        },
+        "text": "=🤖 Procesando tu información...\n⏳ Consultando base de conocimientos..."
+      },
+      "id": "status-message",
+      "name": "Send Status Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [680, 300],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-credentials",
+          "name": "Telegram Bot Credentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "gpt-4-turbo-preview",
+        "messages": {
+          "messageValues": [
+            {
+              "role": "system",
+              "message": "=Eres un nutricionista especializado en la metodología argentina \"Tres Días y Carga | Dieta Inteligente® & Nutrición Evolutiva\".\n\nDatos del paciente:\n- Nombre: {{$('Webhook Telegram').first().$json.patient_data.nombre}}\n- Edad: {{$('Webhook Telegram').first().$json.patient_data.edad}} años\n- Peso: {{$('Webhook Telegram').first().$json.patient_data.peso}} kg\n- Altura: {{$('Webhook Telegram').first().$json.patient_data.altura}} cm\n- Objetivo: {{$('Webhook Telegram').first().$json.patient_data.objetivo}}\n- Actividad: {{$('Webhook Telegram').first().$json.patient_data.actividad}}\n\nContexto de tu base de conocimientos:\n{{$json.results.map(r => r.content).join('\\n\\n')}}\n\nGenera un plan alimentario completo siguiendo estos criterios:\n1. Metodología \"Tres Días y Carga\" - 3 días idénticos\n2. Terminología argentina (palta, ananá, etc.)\n3. Pesos en gramos crudos (excepto verduras libres)\n4. Incluir preparación y horarios\n5. Mostrar macros finales\n6. Formato claro y organizado\n\nRespuesta en español argentino, formato amigable para Telegram."
+            },
+            {
+              "role": "user", 
+              "message": "=Genera el plan alimentario personalizado para {{$('Webhook Telegram').first().$json.patient_data.nombre}}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.7,
+          "maxTokens": 2000
+        }
+      },
+      "id": "generate-plan",
+      "name": "Generate Plan with GPT-4",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [900, 180],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI API Credentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "create", 
+        "chatId": {
+          "chatId": "={{$('Webhook Telegram').first().$json.user_id}}"
+        },
+        "text": "={{$json.message.content}}"
+      },
+      "id": "send-plan",
+      "name": "Send Plan to User",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [1120, 180],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-credentials",
+          "name": "Telegram Bot Credentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"success\": true, \"plan\": \"Plan enviado exitosamente\"}"
+      },
+      "id": "success-response",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1340, 180]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "create",
+        "chatId": {
+          "chatId": "={{$json.user_id}}"
+        },
+        "text": "❌ **Error**\\n\\nNo pude procesar tu solicitud en este momento.\\nPor favor, intentá nuevamente más tarde."
+      },
+      "id": "error-message", 
+      "name": "Send Error Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [680, 420],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-credentials", 
+          "name": "Telegram Bot Credentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"success\": false, \"error\": \"Acción no reconocida\"}"
+      },
+      "id": "error-response",
+      "name": "Error Response", 
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [900, 420]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "table": "nutrition_logs",
+        "columns": {
+          "columnValues": [
+            {
+              "column": "user_id",
+              "value": "={{$('Webhook Telegram').first().$json.user_id}}"
+            },
+            {
+              "column": "action",
+              "value": "={{$('Webhook Telegram').first().$json.action}}"
+            },
+            {
+              "column": "patient_data",
+              "value": "={{JSON.stringify($('Webhook Telegram').first().$json.patient_data)}}"
+            },
+            {
+              "column": "plan_generated",
+              "value": "={{$json.message.content}}"
+            },
+            {
+              "column": "created_at",
+              "value": "={{new Date().toISOString()}}"
+            }
+          ]
+        }
+      },
+      "id": "log-interaction",
+      "name": "Log Interaction",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1120, 300],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-credentials",
+          "name": "PostgreSQL Database"
+        }
+      },
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Webhook Telegram": {
+      "main": [
+        [
+          {
+            "node": "Check Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Action": {
+      "main": [
+        [
+          {
+            "node": "Search RAG Knowledge",
+            "type": "main", 
+            "index": 0
+          },
+          {
+            "node": "Send Status Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Error Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search RAG Knowledge": {
+      "main": [
+        [
+          {
+            "node": "Generate Plan with GPT-4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Plan with GPT-4": {
+      "main": [
+        [
+          {
+            "node": "Send Plan to User",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log Interaction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Plan to User": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Error Message": {
+      "main": [
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "createdAt": "2024-01-01T00:00:00.000Z",
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z",
+      "id": "telegram-nutrition",
+      "name": "telegram-nutrition"
+    }
+  ],
+  "triggerCount": 1,
+  "versionId": "1"
+}
